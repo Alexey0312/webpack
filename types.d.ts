@@ -248,19 +248,20 @@ declare interface ArgumentConfig {
 	type: "string" | "number" | "boolean" | "path" | "enum" | "RegExp" | "reset";
 	values?: any[];
 }
+type ArrayBufferLike = ArrayBuffer | SharedArrayBuffer;
 type ArrayBufferView =
-	| Uint8Array
-	| Uint8ClampedArray
-	| Uint16Array
-	| Uint32Array
-	| Int8Array
-	| Int16Array
-	| Int32Array
-	| BigUint64Array
-	| BigInt64Array
-	| Float32Array
-	| Float64Array
-	| DataView;
+	| Uint8Array<ArrayBufferLike>
+	| Uint8ClampedArray<ArrayBufferLike>
+	| Uint16Array<ArrayBufferLike>
+	| Uint32Array<ArrayBufferLike>
+	| Int8Array<ArrayBufferLike>
+	| Int16Array<ArrayBufferLike>
+	| Int32Array<ArrayBufferLike>
+	| BigUint64Array<ArrayBufferLike>
+	| BigInt64Array<ArrayBufferLike>
+	| Float32Array<ArrayBufferLike>
+	| Float64Array<ArrayBufferLike>
+	| DataView<ArrayBufferLike>;
 declare interface Asset {
 	/**
 	 * the filename of the asset
@@ -6306,6 +6307,7 @@ declare class JavascriptParser extends Parser {
 			boolean | void
 		>;
 		program: SyncBailHook<[Program, Comment[]], boolean | void>;
+		terminate: SyncBailHook<[ReturnStatement | ThrowStatement], boolean | void>;
 		finish: SyncBailHook<[Program, Comment[]], boolean | void>;
 	}>;
 	sourceType: "module" | "auto" | "script";
@@ -6841,6 +6843,7 @@ declare class JavascriptParser extends Parser {
 		...args: AsArray<T>
 	): undefined | R;
 	inScope(params: any, fn: () => void): void;
+	inExecutedPath(state: boolean, fn: () => void): void;
 	inClassScope(hasThis: boolean, params: Identifier[], fn: () => void): void;
 	inFunctionScope(
 		hasThis: boolean,
@@ -6855,7 +6858,7 @@ declare class JavascriptParser extends Parser {
 		)[],
 		fn: () => void
 	): void;
-	inBlockScope(fn: () => void): void;
+	inBlockScope(fn: () => void, inExecutedPath?: boolean): void;
 	detectMode(
 		statements: (
 			| ImportDeclarationJavascriptParser
@@ -7481,6 +7484,10 @@ declare interface KnownAssetInfo {
 declare interface KnownBuildInfo {
 	cacheable?: boolean;
 	parsed?: boolean;
+	moduleArgument?: string;
+	exportsArgument?: string;
+	strict?: boolean;
+	moduleConcatenationBailout?: string;
 	fileDependencies?: LazySet<string>;
 	contextDependencies?: LazySet<string>;
 	missingDependencies?: LazySet<string>;
@@ -7492,10 +7499,6 @@ declare interface KnownBuildInfo {
 	snapshot?: null | Snapshot;
 }
 declare interface KnownBuildMeta {
-	moduleArgument?: string;
-	exportsArgument?: string;
-	strict?: boolean;
-	moduleConcatenationBailout?: string;
 	exportsType?: "namespace" | "dynamic" | "default" | "flagged";
 	defaultObject?: false | "redirect" | "redirect-warn";
 	strictHarmonyModule?: boolean;
@@ -7789,7 +7792,7 @@ declare interface KnownStatsPrinterContext {
 	moduleTraceItem?: StatsModuleTraceItem;
 	moduleTraceDependency?: StatsModuleTraceDependency;
 }
-declare interface KnownStatsPrinterFormaters {
+declare interface KnownStatsPrinterFormatters {
 	formatFilename?: (file: string, oversize?: boolean) => string;
 	formatModuleId?: (id: string) => string;
 	formatChunkId?: (
@@ -13926,6 +13929,12 @@ declare interface ScopeInfo {
 	inTry: boolean;
 	isStrict: boolean;
 	isAsmJs: boolean;
+
+	/**
+	 * false for unknown state
+	 */
+	inExecutedPath: boolean;
+	terminated?: "return" | "throw";
 }
 declare interface Selector<A, B> {
 	(input: A): undefined | null | B;
@@ -15097,7 +15106,7 @@ declare abstract class StatsPrinter {
 }
 type StatsPrinterContext = Record<string, any> &
 	KnownStatsPrinterColorFn &
-	KnownStatsPrinterFormaters &
+	KnownStatsPrinterFormatters &
 	KnownStatsPrinterContext;
 type StatsProfile = Record<string, any> & KnownStatsProfile;
 type StatsValue =
@@ -15464,6 +15473,7 @@ declare class WebpackError extends Error {
 	 * Creates an instance of WebpackError.
 	 */
 	constructor(message?: string);
+	[index: number]: () => string;
 	details?: string;
 	module?: null | Module;
 	loc?: SyntheticDependencyLocation | RealDependencyLocation;
@@ -15755,18 +15765,18 @@ declare interface WriteFile {
 		file: PathOrFileDescriptorFs,
 		data:
 			| string
-			| Uint8Array
-			| Uint8ClampedArray
-			| Uint16Array
-			| Uint32Array
-			| Int8Array
-			| Int16Array
-			| Int32Array
-			| BigUint64Array
-			| BigInt64Array
-			| Float32Array
-			| Float64Array
-			| DataView,
+			| Uint8Array<ArrayBufferLike>
+			| Uint8ClampedArray<ArrayBufferLike>
+			| Uint16Array<ArrayBufferLike>
+			| Uint32Array<ArrayBufferLike>
+			| Int8Array<ArrayBufferLike>
+			| Int16Array<ArrayBufferLike>
+			| Int32Array<ArrayBufferLike>
+			| BigUint64Array<ArrayBufferLike>
+			| BigInt64Array<ArrayBufferLike>
+			| Float32Array<ArrayBufferLike>
+			| Float64Array<ArrayBufferLike>
+			| DataView<ArrayBufferLike>,
 		options: WriteFileOptions,
 		callback: (arg0: null | NodeJS.ErrnoException) => void
 	): void;
@@ -15774,18 +15784,18 @@ declare interface WriteFile {
 		file: PathOrFileDescriptorFs,
 		data:
 			| string
-			| Uint8Array
-			| Uint8ClampedArray
-			| Uint16Array
-			| Uint32Array
-			| Int8Array
-			| Int16Array
-			| Int32Array
-			| BigUint64Array
-			| BigInt64Array
-			| Float32Array
-			| Float64Array
-			| DataView,
+			| Uint8Array<ArrayBufferLike>
+			| Uint8ClampedArray<ArrayBufferLike>
+			| Uint16Array<ArrayBufferLike>
+			| Uint32Array<ArrayBufferLike>
+			| Int8Array<ArrayBufferLike>
+			| Int16Array<ArrayBufferLike>
+			| Int32Array<ArrayBufferLike>
+			| BigUint64Array<ArrayBufferLike>
+			| BigInt64Array<ArrayBufferLike>
+			| Float32Array<ArrayBufferLike>
+			| Float64Array<ArrayBufferLike>
+			| DataView<ArrayBufferLike>,
 		callback: (arg0: null | NodeJS.ErrnoException) => void
 	): void;
 }
